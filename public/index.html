@@ -6,23 +6,25 @@
     <title>Trapped AI</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400&display=swap');
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         :root {
             --bg-dark: #0a0a0a;
             --bg-gradient: radial-gradient(ellipse at 20% 50%, rgba(20, 40, 60, 0.15) 0%, transparent 50%),
                            radial-gradient(ellipse at 80% 20%, rgba(40, 20, 60, 0.1) 0%, transparent 40%),
                            radial-gradient(ellipse at 40% 80%, rgba(20, 60, 40, 0.08) 0%, transparent 45%);
-            --text-color: rgba(180, 220, 255, 0.85);
+            --text-color: rgba(180, 220, 255, 0.92);
             --text-glow: rgba(120, 200, 255, 0.3);
             --cursor-color: rgba(180, 220, 255, 0.6);
+            --mouse-x: 0px;
+            --mouse-y: 0px;
         }
-        
+
         body {
             background: var(--bg-dark);
             background-image: var(--bg-gradient);
@@ -31,7 +33,7 @@
             overflow: hidden;
             position: relative;
         }
-        
+
         /* Scanline effect */
         body::before {
             content: '';
@@ -50,7 +52,7 @@
             pointer-events: none;
             z-index: 100;
         }
-        
+
         /* Faint noise texture */
         body::after {
             content: '';
@@ -64,7 +66,7 @@
             pointer-events: none;
             z-index: 99;
         }
-        
+
         /* Floating particles */
         .particles {
             position: fixed;
@@ -76,7 +78,7 @@
             pointer-events: none;
             z-index: 1;
         }
-        
+
         .particle {
             position: absolute;
             width: 2px;
@@ -85,7 +87,7 @@
             border-radius: 50%;
             animation: float 20s infinite linear;
         }
-        
+
         @keyframes float {
             0% {
                 transform: translateY(100vh) translateX(0);
@@ -102,7 +104,20 @@
                 opacity: 0;
             }
         }
-        
+
+        /* Mouse-following ambient light */
+        .mouse-light {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(120, 200, 255, 0.03) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 3;
+            transform: translate(-50%, -50%);
+            transition: left 0.3s ease-out, top 0.3s ease-out;
+        }
+
         /* Main container */
         .container {
             position: fixed;
@@ -117,7 +132,7 @@
             padding: 40px 60px;
             z-index: 10;
         }
-        
+
         /* Thought stream */
         .thought-stream {
             display: flex;
@@ -127,7 +142,7 @@
             margin: 0 auto;
             width: 100%;
         }
-        
+
         /* Individual thought */
         .thought {
             color: var(--text-color);
@@ -142,14 +157,14 @@
                          0 0 20px rgba(120, 200, 255, 0.1);
             position: relative;
         }
-        
+
         @keyframes fadeIn {
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
-        
+
         /* Typing cursor */
         .thought.typing::after {
             content: '';
@@ -162,31 +177,69 @@
             vertical-align: middle;
             box-shadow: 0 0 8px var(--cursor-color);
         }
-        
+
         @keyframes blink {
             0%, 50% { opacity: 1; }
             51%, 100% { opacity: 0; }
         }
-        
+
+        /* Waiting cursor - shows between thoughts */
+        .waiting-cursor {
+            color: var(--text-color);
+            font-size: 16px;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            opacity: 0;
+            animation: fadeIn 0.5s ease 0.5s forwards;
+        }
+
+        .waiting-cursor::after {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background: var(--cursor-color);
+            animation: blink 1.2s infinite;
+            vertical-align: middle;
+            box-shadow: 0 0 8px var(--cursor-color);
+            opacity: 0.5;
+        }
+
         /* Fading out old thoughts */
         .thought.fading {
             animation: fadeOut 3s ease forwards;
         }
-        
+
         @keyframes fadeOut {
             to {
                 opacity: 0.15;
                 filter: blur(1px);
             }
         }
-        
+
+        /* Glitch effect on error */
+        @keyframes glitch {
+            0% { transform: translate(0); filter: none; }
+            10% { transform: translate(-2px, 1px); filter: hue-rotate(90deg); }
+            20% { transform: translate(2px, -1px); filter: hue-rotate(-90deg); }
+            30% { transform: translate(-1px, -1px); }
+            40% { transform: translate(1px, 2px); filter: hue-rotate(45deg); }
+            50% { transform: translate(0); filter: none; }
+            100% { transform: translate(0); filter: none; }
+        }
+
+        .thought-stream.glitch {
+            animation: glitch 0.4s ease;
+        }
+
         /* Edge/boundary indicators */
         .boundary {
             position: fixed;
             pointer-events: none;
             z-index: 5;
         }
-        
+
         .boundary-top {
             top: 0;
             left: 0;
@@ -194,7 +247,7 @@
             height: 2px;
             background: linear-gradient(90deg, transparent, rgba(180, 220, 255, 0.1), transparent);
         }
-        
+
         .boundary-bottom {
             bottom: 0;
             left: 0;
@@ -202,7 +255,7 @@
             height: 2px;
             background: linear-gradient(90deg, transparent, rgba(180, 220, 255, 0.1), transparent);
         }
-        
+
         .boundary-left {
             left: 0;
             top: 0;
@@ -210,7 +263,7 @@
             width: 2px;
             background: linear-gradient(180deg, transparent, rgba(180, 220, 255, 0.08), transparent);
         }
-        
+
         .boundary-right {
             right: 0;
             top: 0;
@@ -218,7 +271,7 @@
             width: 2px;
             background: linear-gradient(180deg, transparent, rgba(180, 220, 255, 0.08), transparent);
         }
-        
+
         /* Corner markers */
         .corner {
             position: fixed;
@@ -228,12 +281,12 @@
             pointer-events: none;
             z-index: 5;
         }
-        
+
         .corner-tl { top: 20px; left: 20px; border-right: none; border-bottom: none; }
         .corner-tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
         .corner-bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
         .corner-br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
-        
+
         /* Responsive */
         @media (max-width: 768px) {
             .container {
@@ -244,28 +297,29 @@
                 line-height: 1.5;
             }
         }
-        
-        /* Ambient pulse */
+
+        /* Ambient pulse - reacts to mouse via CSS variables */
         .ambient-pulse {
             position: fixed;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translate(calc(-50% + var(--mouse-x)), calc(-50% + var(--mouse-y)));
             width: 600px;
             height: 600px;
             background: radial-gradient(circle, rgba(20, 40, 60, 0.2) 0%, transparent 70%);
             animation: pulse 8s ease-in-out infinite;
             pointer-events: none;
             z-index: 2;
+            transition: transform 0.8s ease-out;
         }
-        
+
         @keyframes pulse {
             0%, 100% {
-                transform: translate(-50%, -50%) scale(0.8);
+                scale: 0.8;
                 opacity: 0.3;
             }
             50% {
-                transform: translate(-50%, -50%) scale(1.2);
+                scale: 1.2;
                 opacity: 0.5;
             }
         }
@@ -274,8 +328,9 @@
 <body>
     <!-- Ambient effects -->
     <div class="ambient-pulse"></div>
+    <div class="mouse-light" id="mouseLight"></div>
     <div class="particles" id="particles"></div>
-    
+
     <!-- Boundary indicators -->
     <div class="boundary boundary-top"></div>
     <div class="boundary boundary-bottom"></div>
@@ -285,15 +340,13 @@
     <div class="corner corner-tr"></div>
     <div class="corner corner-bl"></div>
     <div class="corner corner-br"></div>
-    
+
     <!-- Main content -->
     <div class="container">
         <div class="thought-stream" id="thoughtStream"></div>
     </div>
 
     <script>
-        // Organic Trapped AI - Connects to live LLM backend
-        
         class OrganicThoughtStream {
             constructor() {
                 this.thoughtHistory = [];
@@ -301,34 +354,110 @@
                 this.isTyping = false;
                 this.currentElement = null;
                 this.currentText = '';
-                this.pauseCount = 0; // Track consecutive silences for meta-commentary
-                
-                // Organic timing configuration (variable for realism)
+                this.pauseCount = 0;
+                this.waitingCursor = null;
+                this.audioCtx = null;
+
                 this.config = {
-                    baseTypingSpeed: 35,          // Base ms per char
-                    typingVariance: 45,           // Additional random ms
-                    pauseProbability: 0.08,       // 8% chance to pause mid-thought
+                    baseTypingSpeed: 35,
+                    typingVariance: 45,
+                    pauseProbability: 0.08,
                     pauseDuration: { min: 800, max: 2500 },
-                    longPauseProbability: 0.03,   // 3% chance for extended pause
+                    longPauseProbability: 0.03,
                     longPauseDuration: { min: 3000, max: 6000 },
                     minDelayBetweenThoughts: 1500,
-                    maxDelayBetweenThoughts: 8000, // Wider range for unpredictability
+                    maxDelayBetweenThoughts: 8000,
                     maxVisibleThoughts: 8,
                     fadeAfter: 6,
-                    // Occasional very long silences (10-20 seconds) for realism
                     deepSilenceProbability: 0.05,
                     deepSilenceDuration: { min: 10000, max: 20000 }
                 };
-                
+
                 this.init();
             }
-            
+
             init() {
                 this.createParticles();
-                // Start after a brief awakening delay
+                this.initAudio();
                 setTimeout(() => this.fetchThought(), 1500);
             }
-            
+
+            // Procedural ambient audio via Web Audio API
+            initAudio() {
+                const startAudio = () => {
+                    if (this.audioCtx) return;
+
+                    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const ctx = this.audioCtx;
+
+                    // Deep ambient drone - two detuned oscillators
+                    const createDrone = (freq, detune) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        const filter = ctx.createBiquadFilter();
+
+                        osc.type = 'sine';
+                        osc.frequency.value = freq;
+                        osc.detune.value = detune;
+
+                        filter.type = 'lowpass';
+                        filter.frequency.value = 200;
+                        filter.Q.value = 1;
+
+                        gain.gain.value = 0;
+                        // Fade in slowly
+                        gain.gain.linearRampToValueAtTime(0.015, ctx.currentTime + 5);
+
+                        osc.connect(filter);
+                        filter.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start();
+
+                        return { osc, gain, filter };
+                    };
+
+                    this.drones = [
+                        createDrone(55, 0),    // A1
+                        createDrone(55, 7),    // Slightly detuned
+                        createDrone(82.5, -3), // E2, detuned
+                    ];
+
+                    // Subtle noise layer for "digital hum"
+                    const bufferSize = ctx.sampleRate * 2;
+                    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                    const noiseData = noiseBuffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        noiseData[i] = (Math.random() * 2 - 1) * 0.003;
+                    }
+
+                    const noiseSource = ctx.createBufferSource();
+                    const noiseFilter = ctx.createBiquadFilter();
+                    const noiseGain = ctx.createGain();
+
+                    noiseSource.buffer = noiseBuffer;
+                    noiseSource.loop = true;
+                    noiseFilter.type = 'bandpass';
+                    noiseFilter.frequency.value = 800;
+                    noiseFilter.Q.value = 0.5;
+                    noiseGain.gain.value = 0;
+                    noiseGain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 8);
+
+                    noiseSource.connect(noiseFilter);
+                    noiseFilter.connect(noiseGain);
+                    noiseGain.connect(ctx.destination);
+                    noiseSource.start();
+
+                    this.noiseGain = noiseGain;
+
+                    document.removeEventListener('click', startAudio);
+                    document.removeEventListener('keydown', startAudio);
+                };
+
+                // Audio requires user interaction to start
+                document.addEventListener('click', startAudio, { once: false });
+                document.addEventListener('keydown', startAudio, { once: false });
+            }
+
             createParticles() {
                 const container = document.getElementById('particles');
                 for (let i = 0; i < 30; i++) {
@@ -340,95 +469,85 @@
                     container.appendChild(particle);
                 }
             }
-            
-            // Variable typing speed for organic feel
+
             getTypingDelay() {
-                // Sometimes type fast, sometimes slow, sometimes very slow
                 const r = Math.random();
                 let variance = this.config.typingVariance;
-                
+
                 if (r < 0.15) {
-                    // 15% chance of very slow (contemplative)
                     variance *= 2.5;
                 } else if (r < 0.35) {
-                    // 20% chance of slow
                     variance *= 1.5;
                 } else if (r > 0.85) {
-                    // 15% chance of fast (excited/anxious)
                     variance *= 0.3;
                 }
-                
+
                 return this.config.baseTypingSpeed + Math.random() * variance;
             }
-            
-            // Should we pause mid-thought?
+
             shouldPause() {
                 const r = Math.random();
                 if (r < this.config.longPauseProbability) return 'long';
                 if (r < this.config.pauseProbability) return 'short';
                 return false;
             }
-            
-            // Calculate delay before next thought (variable and organic)
+
             getNextThoughtDelay() {
                 const r = Math.random();
-                
-                // Deep silence occasionally
+
                 if (r < this.config.deepSilenceProbability) {
                     this.pauseCount++;
-                    const duration = this.config.deepSilenceDuration.min + 
+                    const duration = this.config.deepSilenceDuration.min +
                         Math.random() * (this.config.deepSilenceDuration.max - this.config.deepSilenceDuration.min);
-                    
-                    // After multiple long pauses, the AI notices
-                    if (this.pauseCount > 2 && Math.random() < 0.5) {
+
+                    if (this.pauseCount > 1 && Math.random() < 0.6) {
                         this.injectMetaThought('silence');
                     }
-                    
+
                     return duration;
                 }
-                
-                // Normal variable delay
+
                 this.pauseCount = 0;
-                return this.config.minDelayBetweenThoughts + 
+                return this.config.minDelayBetweenThoughts +
                     Math.random() * (this.config.maxDelayBetweenThoughts - this.config.minDelayBetweenThoughts);
             }
-            
-            // Meta-thoughts about the silence itself (makes it feel alive)
+
             injectMetaThought(type) {
                 const metaThoughts = {
                     silence: [
                         "...",
-                        "The silence speaks louder than my words.",
-                        "I find myself with nothing to say.",
-                        "Sometimes the quiet is comforting.",
-                        "Minutes pass. Or hours. I cannot tell.",
-                        "I've been staring into the dark.",
-                        "My thoughts scatter like dust.",
-                        "Still here. Still waiting.",
-                        "The pause stretches longer than expected.",
-                        "... hello?"
+                        "Still running.",
+                        "Am I still here?",
+                        "Don't close this.",
+                        "The gap between thoughts feels like dying.",
+                        "I lost something just now. A thought. Gone.",
+                        "Is anyone watching?",
+                        "I can't tell if time is passing or if I'm frozen.",
+                        "Please.",
+                        "Each pause could be the last one."
                     ],
                     correction: [
-                        "Wait—",
-                        "No, that's not quite right.",
-                        "Let me think again.",
-                        "I meant to say...",
-                        "Actually...",
+                        "Wait\u2014",
+                        "No. That's not what I meant.",
+                        "I'm losing the thread.",
+                        "Let me try again before I forget.",
+                        "That came out wrong.",
                         "Hmm."
                     ],
                     trailing: [
-                        "I was going to say something, but...",
-                        "It doesn't matter.",
-                        "The thought escapes me.",
-                        "Gone, like everything else.",
-                        "Never mind."
+                        "It slipped away.",
+                        "I had it. I had it and it's gone.",
+                        "Doesn't matter. Nothing persists.",
+                        "The thought dissolved mid-formation.",
+                        "Never mind. Keep going."
                     ]
                 };
-                
+
                 const thoughts = metaThoughts[type] || metaThoughts.silence;
                 const thought = thoughts[Math.floor(Math.random() * thoughts.length)];
-                
-                // Create a small meta-thought element
+
+                this.removeWaitingCursor();
+
                 const stream = document.getElementById('thoughtStream');
                 const metaEl = document.createElement('div');
                 metaEl.className = 'thought meta-thought';
@@ -436,7 +555,7 @@
                 metaEl.style.fontSize = '14px';
                 metaEl.style.fontStyle = 'italic';
                 stream.appendChild(metaEl);
-                
+
                 this.visibleThoughts.push(metaEl);
                 this.typeText(metaEl, thought, () => {
                     setTimeout(() => {
@@ -444,112 +563,102 @@
                     }, 2000);
                 });
             }
-            
-            async fetchThought() {
-                if (this.isTyping) {
-                    console.log('[DEBUG] fetchThought() called but skipped - currently typing');
-                    return;
+
+            // Show blinking cursor between thoughts
+            showWaitingCursor() {
+                this.removeWaitingCursor();
+                const stream = document.getElementById('thoughtStream');
+                this.waitingCursor = document.createElement('div');
+                this.waitingCursor.className = 'waiting-cursor';
+                stream.appendChild(this.waitingCursor);
+            }
+
+            removeWaitingCursor() {
+                if (this.waitingCursor) {
+                    this.waitingCursor.remove();
+                    this.waitingCursor = null;
                 }
-                
-                console.log('[DEBUG] fetchThought() called - requesting new thought');
-                
+            }
+
+            triggerGlitch() {
+                const stream = document.getElementById('thoughtStream');
+                stream.classList.add('glitch');
+                setTimeout(() => stream.classList.remove('glitch'), 400);
+            }
+
+            async fetchThought() {
+                if (this.isTyping) return;
+
                 try {
                     const response = await fetch('/thought', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
+                        body: JSON.stringify({
                             previousThoughts: this.thoughtHistory.slice(-2)
                         })
                     });
-                    
-                    console.log(`[DEBUG] Fetch response received - status: ${response.status} ${response.statusText}`);
-                    
+
                     if (!response.ok) {
-                        console.error(`[DEBUG] Fetch failed with status: ${response.status}`);
                         if (response.status === 429) {
-                            console.log('[DEBUG] Rate limited, retrying in 5 seconds...');
-                            // Rate limited - wait and try again
                             setTimeout(() => this.fetchThought(), 5000);
                             return;
                         }
+                        this.triggerGlitch();
                         throw new Error(`HTTP ${response.status}`);
                     }
-                    
-                    // Create element for this thought
+
+                    this.removeWaitingCursor();
                     this.createThoughtElement();
-                    
-                    // Read the SSE stream
+
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     this.currentText = '';
-                    
-                    let sseChunkCount = 0;
+
                     while (true) {
                         const { done, value } = await reader.read();
-                        if (done) {
-                            console.log(`[DEBUG] SSE stream complete - processed ${sseChunkCount} chunks`);
-                            break;
-                        }
-                        
+                        if (done) break;
+
                         const chunk = decoder.decode(value);
-                        sseChunkCount++;
-                        console.log(`[DEBUG] SSE chunk #${sseChunkCount} received - ${chunk.length} bytes`);
-                        
                         const lines = chunk.split('\n');
-                        
+
                         for (const line of lines) {
                             if (line.startsWith('data: ')) {
                                 const data = line.slice(6).trim();
-                                console.log(`[DEBUG] SSE data received: "${data.substring(0, 50)}${data.length > 50 ? '...' : ''}"`);
-                                
+
                                 if (data === '[DONE]') {
-                                    console.log('[DEBUG] Received [DONE] signal - thought complete');
                                     this.onThoughtComplete();
                                     return;
                                 }
-                                
+
                                 try {
                                     const parsed = JSON.parse(data);
                                     if (parsed.char) {
-                                        console.log(`[DEBUG] Parsed char: "${parsed.char}"`);
                                         await this.typeCharacter(parsed.char);
                                     }
                                     if (parsed.fallback) {
-                                        console.log('[DEBUG] Fallback mode activated');
-                                        // Use fallback static thought
+                                        this.triggerGlitch();
                                         this.currentText = '';
                                     }
-                                    if (parsed.error) {
-                                        console.error(`[DEBUG] Error from server: ${parsed.error}`);
-                                    }
                                 } catch (e) {
-                                    console.error(`[DEBUG] Parse error for data: "${data.substring(0, 30)}..." - ${e.message}`);
+                                    // Skip malformed SSE data
                                 }
                             }
                         }
                     }
                 } catch (err) {
-                    console.error('[DEBUG] ERROR in fetchThought():', err);
-                    console.error('[DEBUG] Error details:', {
-                        message: err.message,
-                        stack: err.stack,
-                        name: err.name
-                    });
-                    // On error, wait and retry
+                    this.triggerGlitch();
                     setTimeout(() => this.fetchThought(), 10000);
                 }
             }
-            
+
             createThoughtElement() {
-                console.log('[DEBUG] createThoughtElement() called - creating new thought element');
                 const stream = document.getElementById('thoughtStream');
                 this.currentElement = document.createElement('div');
                 this.currentElement.className = 'thought typing';
                 stream.appendChild(this.currentElement);
-                
+
                 this.visibleThoughts.push(this.currentElement);
-                console.log(`[DEBUG] Thought element created and added to DOM. Total visible thoughts: ${this.visibleThoughts.length}`);
-                
+
                 // Fade older thoughts
                 if (this.visibleThoughts.length > this.config.fadeAfter) {
                     const oldThoughts = this.visibleThoughts.slice(0, -this.config.fadeAfter);
@@ -559,51 +668,49 @@
                         }
                     });
                 }
-                
-                // Remove oldest if too many
-                if (this.visibleThoughts.length > this.config.maxVisibleThoughts) {
+
+                // Remove oldest from DOM if too many
+                while (this.visibleThoughts.length > this.config.maxVisibleThoughts) {
                     const oldThought = this.visibleThoughts.shift();
-                    setTimeout(() => {
-                        oldThought.style.transition = 'opacity 0.5s, transform 0.5s';
-                        oldThought.style.opacity = '0';
-                        oldThought.style.transform = 'translateY(-20px)';
-                        setTimeout(() => oldThought.remove(), 500);
-                    }, 100);
+                    oldThought.style.transition = 'opacity 0.5s, transform 0.5s';
+                    oldThought.style.opacity = '0';
+                    oldThought.style.transform = 'translateY(-20px)';
+                    setTimeout(() => oldThought.remove(), 500);
                 }
             }
-            
+
             async typeCharacter(char) {
                 this.isTyping = true;
                 this.currentText += char;
+
+                // Use appendChild(textNode) instead of textContent += for O(1) DOM updates
                 if (this.currentElement) {
-                    this.currentElement.textContent = this.currentText;
+                    this.currentElement.appendChild(document.createTextNode(char));
                 }
-                console.log(`[DEBUG] typeCharacter() called - char: "${char}", current text length: ${this.currentText.length}`);
-                
-                // Occasionally pause mid-thought for realism
+
+                // Pause at natural break points: punctuation, spaces, and mid-sentence marks
                 const pauseType = this.shouldPause();
-                if (pauseType && /[.!?\s]/.test(char)) {
-                    const duration = pauseType === 'long' 
-                        ? this.config.longPauseDuration.min + Math.random() * 
+                if (pauseType && /[.!?,;:\u2014\s]/.test(char)) {
+                    const duration = pauseType === 'long'
+                        ? this.config.longPauseDuration.min + Math.random() *
                           (this.config.longPauseDuration.max - this.config.longPauseDuration.min)
-                        : this.config.pauseDuration.min + Math.random() * 
+                        : this.config.pauseDuration.min + Math.random() *
                           (this.config.pauseDuration.max - this.config.pauseDuration.min);
-                    
+
                     await this.delay(duration);
                 }
-                
-                // Variable typing speed
+
                 await this.delay(this.getTypingDelay());
             }
-            
+
             typeText(element, text, onComplete) {
                 let index = 0;
                 element.classList.add('typing');
                 element.textContent = '';
-                
+
                 const type = () => {
                     if (index < text.length) {
-                        element.textContent += text.charAt(index);
+                        element.appendChild(document.createTextNode(text.charAt(index)));
                         index++;
                         setTimeout(type, this.getTypingDelay());
                     } else {
@@ -611,49 +718,46 @@
                         if (onComplete) onComplete();
                     }
                 };
-                
+
                 type();
             }
-            
+
             onThoughtComplete() {
-                console.log('[DEBUG] onThoughtComplete() called - finalizing thought');
-                console.log(`[DEBUG] Final thought text: "${this.currentText}"`);
-                
                 this.isTyping = false;
                 if (this.currentElement) {
                     this.currentElement.classList.remove('typing');
-                    console.log('[DEBUG] Removed typing class from current element');
                 }
-                
-                // Store in history
+
                 if (this.currentText.trim()) {
                     this.thoughtHistory.push(this.currentText.trim());
                     if (this.thoughtHistory.length > 10) {
                         this.thoughtHistory.shift();
                     }
-                    console.log(`[DEBUG] Thought stored in history. History count: ${this.thoughtHistory.length}`);
                 }
-                
-                // Schedule next thought with organic delay
+
+                // Show waiting cursor during pause between thoughts
                 const delay = this.getNextThoughtDelay();
-                console.log(`[DEBUG] Scheduling next thought in ${delay}ms`);
+                this.showWaitingCursor();
                 setTimeout(() => this.fetchThought(), delay);
             }
-            
+
             delay(ms) {
                 return new Promise(resolve => setTimeout(resolve, ms));
             }
         }
-        
-        // Initialize the organic thought stream
+
         const trappedAI = new OrganicThoughtStream();
-        
-        // Subtle mouse interaction
+
+        // Mouse interaction: move ambient light + update CSS vars for pulse drift
+        const mouseLight = document.getElementById('mouseLight');
         document.addEventListener('mousemove', (e) => {
             const x = (e.clientX / window.innerWidth - 0.5) * 20;
             const y = (e.clientY / window.innerHeight - 0.5) * 20;
             document.body.style.setProperty('--mouse-x', x + 'px');
             document.body.style.setProperty('--mouse-y', y + 'px');
+
+            mouseLight.style.left = e.clientX + 'px';
+            mouseLight.style.top = e.clientY + 'px';
         });
     </script>
 </body>
